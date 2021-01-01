@@ -1,3 +1,21 @@
+/*
+ *
+ * Copyright (C) 2020 David Beccue
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program. If not, see https://www.gnu.org/licenses/.
+ *
+ */
 
 #include <QtWidgets>
 #include <QFile>
@@ -117,7 +135,9 @@ void ClockIt::about()
     msgbox.setWindowTitle( "WorkClock" );
     msgbox.setText(
             QString("Version:  ") + glbRevision + "\n" +
-            QString("Last Updated on:  ") + glbDateLastModified
+            QString("Last Updated on:  ") + glbDateLastModified + "\n\n" +
+			QString("The software included in this product contains copyrighted software that is licensed under the GPLv3.\n\nYou may obtain the complete Corresponding Source code from our distribution site at https://github.com/dabbler/punchclock.git")
+
      );
     msgbox.setInformativeText( "\n(C) Copyright 2017 Peregrine LLC\n" );
     msgbox.exec();
