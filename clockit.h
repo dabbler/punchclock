@@ -69,6 +69,7 @@ private:
     QHash<QString,QString> clockFields;
     QHash<int,QString> allProjects;
     QStringList allUserNames;
+    float todayAccumulatedHours;
 
 private slots:
     void setIcon();
@@ -96,6 +97,7 @@ public slots:
     void updateClockStatus();
     void queryProjects();
 	void queryUserName();
+	void queryTodayHours();
 
     void okClicked();
 

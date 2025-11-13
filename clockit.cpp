@@ -56,6 +56,8 @@ ClockIt::ClockIt(QWidget *parent) :
 
     readDefaultSettings();
 
+	todayAccumulatedHours = 0.0;
+
 	connect( &clockedInElsewhereTimer, SIGNAL(timeout()), this, SLOT(updateClockStatus()) );
 
     connect( ui->buttonBox, SIGNAL(accepted()), this, SLOT(okClicked()) );
@@ -437,6 +439,9 @@ void ClockIt::on_comboProject_activated(const QString &theProject )
 		project = theProject;
 		QSettings settings("WorkClock", "Config");
 		settings.setValue("project", theProject );
+
+		// Query today's hours for the newly selected project
+		queryTodayHours();
 	}
 }
 
@@ -570,6 +575,21 @@ void ClockIt::replyFinished( QNetworkReply *reply )
 			QString s = QString("Clocked In\nHours worked: %1").arg(QString::number(secsDiff,'g',3));
 			trayIcon->setToolTip(s);
 		}
+
+		// Query today's accumulated hours for this project
+		queryTodayHours();
+	}
+
+	if ( strWhichOne == "TodayHours" ) {
+		QString webResp = reply->readAll();
+		todayAccumulatedHours = webResp.toFloat();
+
+#ifdef DEBUG_OUTPUT
+		qDebug() << "Today's accumulated hours:" << todayAccumulatedHours;
+#endif
+
+		// Update the display with accumulated hours
+		showHours();
 	}
 
 	reply->deleteLater();
@@ -605,6 +625,31 @@ void ClockIt::queryUserName()
 }
 
 
+void ClockIt::queryTodayHours()
+{
+#ifdef DEBUG_OUTPUT
+	qDebug() << "ClockIt::queryTodayHours()";
+#endif
+
+	if ( project.isEmpty() || allProjects.key(project) == 0 ) {
+		return;  // No project selected, can't query hours
+	}
+
+	QString todayStr = QDate::currentDate().toString("yyyy-MM-dd");
+	QString urlStr = QString(glbHostUrl) + QString("/todayhours.php?login=%1&project_id=%2&date=%3")
+		.arg( QUrl::toPercentEncoding( Preferences::getUserName() ) )
+		.arg( allProjects.key(project) )
+		.arg( todayStr );
+
+#ifdef DEBUG_OUTPUT
+	qDebug() << "queryTodayHours() -> get(" << urlStr << ")";
+#endif
+
+	QNetworkReply *reply = http->get( QNetworkRequest(QUrl(urlStr)));
+	reply->setProperty("whichone", QVariant("TodayHours") );
+}
+
+
 void ClockIt::showMessage(QString msgTitle, QString msgBody, int iconType)
 {
 #ifdef DEBUG_OUTPUT
@@ -633,11 +678,34 @@ void ClockIt::showHours()
 {
 	if ( isClockedIn() ) {
 		float secsDiff = ui->dtClockInTime->dateTime().secsTo( ui->dtClockOutTime->dateTime() ) / 3600.0;
-QString s = QString("Hours worked: %1").arg(QString::number(secsDiff,'g',3));
-qDebug() << "showHours()    " + s;
-		ui->lblHoursWorked->setText( QString("Hours worked: %1").arg(QString::number(secsDiff,'g',3)) );
+		float totalToday = todayAccumulatedHours + secsDiff;
+
+		QString s = QString("Session: %1  |  Today Total: %2")
+			.arg(QString::number(secsDiff,'f',2))
+			.arg(QString::number(totalToday,'f',2));
+
+#ifdef DEBUG_OUTPUT
+		qDebug() << "showHours()    " + s;
+#endif
+		ui->lblHoursWorked->setText( s );
+
+		// Update tooltip with accumulated hours
+		QString tooltipStr = QString("Clocked In\nSession Hours: %1\nToday's Total on %2: %3")
+			.arg(QString::number(secsDiff,'f',2))
+			.arg(project)
+			.arg(QString::number(totalToday,'f',2));
+		trayIcon->setToolTip(tooltipStr);
 	} else {
-		ui->lblHoursWorked->setText("");
+		if ( todayAccumulatedHours > 0.001 ) {
+			QString s = QString("Today's Total on %1: %2")
+				.arg(project)
+				.arg(QString::number(todayAccumulatedHours,'f',2));
+			ui->lblHoursWorked->setText( s );
+			trayIcon->setToolTip(QString("Clocked Out\n%1").arg(s));
+		} else {
+			ui->lblHoursWorked->setText("");
+			trayIcon->setToolTip("Clocked Out");
+		}
 	}
 }
 
